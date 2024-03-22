@@ -19,7 +19,7 @@
 #include<linux/kobject.h> 
 #include <linux/interrupt.h>
 #include <asm/io.h>
-#include <linux/err.h>
+//#include <linux/err.h>
 //#include <asm/hw_irq.h>
 //#include <linux/err.h>
  
