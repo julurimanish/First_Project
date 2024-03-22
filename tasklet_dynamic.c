@@ -20,8 +20,8 @@
 #include <linux/interrupt.h>
 #include <asm/io.h>
 #include <linux/err.h>
-#include <asm/hw_irq.h>
-#include <linux/err.h>
+//#include <asm/hw_irq.h>
+//#include <linux/err.h>
  
 #define IRQ_NO 11
  
