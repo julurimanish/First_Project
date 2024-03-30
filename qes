@@ -1,0 +1,201 @@
+1)
+
+APB operation states :
+ APB :
+low cost interface
+low power consumption
+reduce interface complexity
+used for interfacing low BW
+non-pipelined
+ideal for peripherals
+has 2 independent data buses
+	1. read
+	2. write
+bus is 32 bit wide
+can't perfrom read & write at same time
+donot support individual handshake signals
+every trasfer takes at least 2 cycles
+	1. setup phase 
+	2. access phase
+no burst operation
+single master(no arbitration needed)
+
+APB bridge functions:
+	
+	latches the address & hold it valid throughtout the transfer
+	decodes the address & genrates a pheripheral select
+	drives dat onto APB for write transfer
+	Drives APB datat onto system bus for read transfer
+	Generate timimng stable for the transfer
+
+APB Operating stats
+	IDLE phase (default state of APB)
+	set up phase
+		when transfer is required the bus moves into the setup state, hwere appropiate select signal P_SELx is asserted
+		bus remains in SETUP phase for 1 clock cuycle & always move sto access state on the next rising edge of the clocl
+		Address ,write,select & write data signals must remain stable during transition from set up to access states
+
+Note: Before readignoperating states google the below topics
+	1)state diagram of operating states
+	2)APB interface  signals
+	3) AHB master & slave pin Diagrams
+
+Acess Phase: 
+	the enable signal, PENABLE is asserted in Access State
+	exit from the access state us controlled by the PREADY signal from the state
+	During 1st cycle of Access phase,if aREADY is held low by the slave then the pheripheral bus remains int he access state
+	During 2nd cycle of Access state, if PREADY is driven high by the slave then access state is exited & bus returns to the IDLE state if no more transactions are required
+	If there are another transfer followed the bus moved directly into the SETUP state
+
+
+SUMMARY:
+	SETUP: 
+		when transfer required
+		PSELX is asserted
+		only one cycle
+	ACCESS :
+		PENABLE is asserted
+		Addr,write,select,& write dat remains stable
+		stay if PREADY = L
+		go to IDLE if PREADY = H &no more data
+		go to SETUP if PREADY = H & more data Pending.
+
+
+You can use PSLVERR to indicate error condition on APB transfer 
+error conditions can occur both on read & write transfers
+PSLVERR is considered only valid in last cycle of APB transfer when PSEL, PENSBL & PREADY are all high.
+
+TIMING DIAGRAM :
+
+write transfers   
+	1) no wait state
+	2)wait state
+read transfer
+	1)no wait state
+	2)wait state
+APB write transfer with error response
+APB read transfer with error response
+write followed by read
+back to back transfers
+burst of read/write transfers.
+
+
+2)
+
+AXI features :
+	seperate address/control /data phases
+	supports unaligned data using byte strobes
+	seperate read & write data channels to enable low cost direct memory access
+	ability to issue multiple outstanding addresses.
+	burst based transactions with only start address issued
+
+5 channels :
+	1)write address channel(aw)
+	2)write data channel(w)
+	3)write response channel(b)
+	4)read address channel(ar)
+	5)read dataa /reponse channel(r)
+
+each channel is independent & use two way flow control using VALID & READY handshake  mechanism
+VALID: indicate when data or control info avaliable
+READY : indicate that it accepts the data/ciontrol information
+
+transfer occurs if both signals (valis& ready) are high
+DATA channels include LAST signal to indicate when the transfer of final data item.
+
+READ channel :
+ 	
+	convey both read data & any read response information from slave back to master
+	8- 1024 bits wide
+	read response indicate completion status of rad transaction
+	burst based
+
+WRITE channel :
+	burst -base ,there is response for entire burst &N not for each data transfer with in burst
+	8-1024  bit wide
+	one byte lane strobe for every eight data bits,  indiactes which byte of the data are valid.
+
+
+CHANNEL HANDSHAKE :
+ 
+	infromation moves only when source is valid & destination is ready
+	on ecah channel the master or slave can limit the floe 
+	transfer occur only when both the VALID & READY signals are high
+	the data /control information from the source remains stable until the destination drives the READY signal high
+	very flexible
+
+VALID BEFORE READY :
+
+	the data/control information from the source reamins stable until destination drives READY signal HIGH indicate sthat it accepts the data or control information
+	A default READY value low implies the transfer takes atleast two cycles.
+
+
+READY BEFORE VALID :
+	indicates destiantion can accept the data/ control information in a single cycle as soon as it beomes valid
+
+VALID WITH READY :
+
+	in this case the transfer occurs immediately.
+
+
+3)
+
+AXI :
+
+bufferable bit 
+	if a transaction is bufferable 
+		it is acceptable for a bridge/system levele cacahe to provide write response .
+	if non bufferable
+		final destination to provide response
+when bufferable bit is high, it means that the inter connect/ any component can dealy the transactions reaches its final destination for an arbitary no. of cycles 
+this is usually only relavant to write.
+
+CONTROL HAZARDS :
+
+caused by change of flow of instructions
+	conditional branches
+	unconditional branches
+	exception branches
+possible approaches:
+	stall(impact cpi)
+	move decision point as early in pipeline
+	delay decision
+	predict
+
+two types of stalls:
+	
+	NOP instructions inserted between two instructions in pipeline 
+	keep instruction earlier in the pipeline(later in code) from progressing down the pipeline for a cycle
+	insert nop by zeroing control bits in the pipeline register at appropiate stage
+	let insructions later in the pipeline progress normally down the pipeline
+	Flush where instruction in the pipeline is replaced with a nop instruction Zero the control bits for the instructon to be flushed
+
+Load use Hazard detection unit:
+  
+	Need HDU in IDE stage that inserts stall between the load & its use
+	ID Hazard detection
+		if (ID/EX memory read and ((id/ex register RT = IF/ID register RS) or (ID/EX register rt =IF/ID register rt)))
+		stall the pipeline.
+	The first line tests to se if the instruction now in the ex. stage is a lw; the next two lines check to see if destination register of the lw matches either source register of the instruction in ID stage
+	After this one cycle stall, the forwading logic can handle remaining data hazards.
+
+
+STALL HARDWARE:
+
+	Along with hazard unit , we have to implement the stall
+	prevent the inst. in the IF & ID stages from progressing down the pipelines  -done by preventing the pc register & the IF/ID pipeline register from changing.
+	hazard detection unit controls the writing of the PC (Pc. wait) & IF/ID (IF/ID .write) register
+	insert "bubble" between the lw instruction (in the EX stage) & the load use instruction (in th eID-stage)
+	set the control bit in the EX,MEM & WB control fields of ID/EX pipeline register to  o (nop). th eHOC th emux that chooses between the real control value & the o's
+	let the lw inst. & the inst after it int he pipeline proceed normally down the pipeline
+
+
+Mechanism of stalling :
+
+	If the check to stall verifie sthe n the pipelies needs to stall only 1 clk cycle after the load that the forwading unit can reslove the dependency.
+	what the hardware does to stall the pipeline 1 cycle 
+	does not let the IF/ID register change (disable write) this will cause th einstruuction in the ID stage to repeat  i,e..stall
+	therefore the inst. just behind in the IF stage must be stalled as well so hardware doesnot let the PC change this will cauuse the inst in the IF stage to repeat  i,e .. stall
+	 changes all the EX,MEM & WB control fields in the ID/EX pipeline refiste rto 0, so efficency the instruction just behind the load becomes a nop a bubble is set to have been inseted into pipeline
+	note that we cannot turn that inst. into an nop by 0ing all the bits in the inst. itself - recall nop= 00..0- because it has already been decoded and control signal generated.
+
